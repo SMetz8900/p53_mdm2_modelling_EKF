@@ -6,10 +6,8 @@ model_name = 'EKF_nonconstant_pi';
 % Set simulation time
 sim_time = 360;
 
-% Run the Simulink model
 simOut = sim(model_name, 'StopTime', num2str(sim_time));
 
-% Extract results from Simulink logs
 t_sim = simOut.get("tout");      % Time vector
 p53_sim = simOut.get("p53_data");   % p53 concentration data    
 Mdm2_sim = simOut.get("Mdm2_data");    % Mdm2 concentration data
