@@ -1,4 +1,4 @@
-%% EKF-based Parameter Estimation for the p53-Mdm2 Model (DDE version)
+%% EKF-based Parameter Estimation for the p53-Mdm2 Model
 clear; clc; close all;
 
 %% Load synthetic data
@@ -15,7 +15,6 @@ k2  = 2;
 K2  = 1;       
 d_y = 1;      
 
-%% --- EKF: Which Parameters We Estimate ---
 % estimate [ d_x ; k_s ; tau ].
 d_x_true = 1.0;
 k_s_true = 2.0;
@@ -26,8 +25,7 @@ d_x_guess = 1.5;
 k_s_guess = 1.0;
 tau_guess = 2.5; % in seconds 
 
-%% Augmented State: [ x(t); y(t); d_x; k_s; tau ]
-% Initialize the state from the first data point
+%% State vector: [ x(t); y(t); d_x; k_s; tau ]
 x0 = p53(1);
 y0 = Mdm2(1);
 
@@ -99,7 +97,6 @@ for k = 1:(N_time-1)
     y_next = yk + h*( k2/(K2^n + max(xk^n, 1e-9)) ...
                       - d_y * yk );
                   
-    % parameters are treated as constant in the prediction:
     dx_next  = dxk; 
     ks_next  = ksk;
     tau_next = tauk;
@@ -111,15 +108,13 @@ for k = 1:(N_time-1)
                tau_next ];
     
     %-----------------------------------------------------------
-    % 4) JACOBIAN OF f w.r.t. z = [x, y, dx, ks, tau]
+    % 4) Jacobian of f w.r.t. z = [x, y, dx, ks, tau]
     %-----------------------------------------------------------
     denom_xn = (K1 + max(xk^n,1e-9));  % avoid zero
     frac     = (k1 * y_delayed * xk) / denom_xn;
     
     % partial derivatives wrt x:
     %   df_x/dx = 1 + h*d/dx( ... ) 
-    %   where the inside is  - frac - dx*x + ks(does not depend on x) ...
-    % but frac depends on x in multiple ways.
     
     % d frac/dx = k1 * y_delayed * [ (1 * denom_xn) - (xk * n*xk^(n-1)) ] / denom_xn^2
     %            = k1 * y_delayed * [ denom_xn - n*xk^n ] / denom_xn^2
@@ -156,9 +151,9 @@ for k = 1:(N_time-1)
     % partial wrt y
     F(2,2) = 1 - h*d_y;
     % partial wrt dx
-    F(2,3) = 0;  % dx doesn't appear in eqn for y
+    F(2,3) = 0;  % dx doesn't appear in eq. for y
     % partial wrt ks
-    F(2,4) = 0;  % ks doesn't appear in eqn for y
+    F(2,4) = 0;  % ks doesn't appear in eq. for y
     % partial wrt tau
     %   y'(t) has no delayed y term (only x^n inside), so ∂/∂tau = 0
     F(2,5) = 0;
@@ -211,6 +206,12 @@ dx_est  = z_history(3,:);
 ks_est  = z_history(4,:);
 tau_est = z_history(5,:);
 
+
+%-----------------------------------------------------------
+% Plotting 
+%-----------------------------------------------------------
+
+% Plotting of parameter estimates 
 figure; 
 subplot(3,1,1)
 plot(time,dx_est,'LineWidth',2); hold on
@@ -233,6 +234,7 @@ xlabel('Time'); ylabel('\tau'); grid on;
 legend('Est','True','Location','Best');
 title('Estimated \tau');
 
+% Plotting of estimated vs. true states 
 figure;
 plot(time,x_est,'r--','LineWidth',2); hold on
 plot(time,y_est,'b--','LineWidth',2);
@@ -246,14 +248,13 @@ grid on;
 n_smooth = 250; 
 n_smooth_ks = 350;
 
-% Find the indices from N_time-n_smooth+1 to N_time:
 N_time   = size(z_history, 2);
 startIdx = max(1, N_time - n_smooth + 1);
 startIdx_ks = max(1, N_time - n_smooth_ks +1);
 idxRange = startIdx : N_time;
 idxRange_ks = startIdx_ks : N_time;
 
-% Compute the mean (smoothed) parameters:
+% Compute the smoothed parameters:
 d_x_smooth  = mean(z_history(3, idxRange));
 k_s_smooth  = mean(z_history(4, idxRange_ks));
 tau_smooth  = mean(z_history(5, idxRange));
@@ -272,8 +273,7 @@ ks = k_s_smooth;
 dx = d_x_smooth;
 tau = tau_smooth;
 
-% Time span and initial conditions as before
-
+% Simulate data using estimated parameter values & plot 
 model_name = 'PSO_p53_mdm2_simulation';
 load_system(model_name);
 
